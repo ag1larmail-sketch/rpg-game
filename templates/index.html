@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RPG с ИИ Мастером</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        .container {
+            background: #2d2d2d;
+            padding: 30px;
+            border-radius: 10px;
+        }
+        h1 {
+            color: #ffd700;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        h2 {
+            color: #ffd700;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+        input, select, button, textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #444;
+            background: #333;
+            color: white;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        .join-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #444;
+        }
+        .class-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .class-card {
+            background: #333;
+            padding: 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .class-card:hover {
+            transform: translateY(-2px);
+            border-color: #4CAF50;
+        }
+        .class-card.selected {
+            border-color: #ffd700;
+            background: #3a3a3a;
+            box-shadow: 0 0 15px #ffd70033;
+        }
+        .class-card h3 {
+            margin: 0 0 10px 0;
+            color: #ffd700;
+        }
+        .stats {
+            font-size: 0.9em;
+            color: #aaa;
+            text-align: left;
+            padding: 10px;
+            background: #222;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+        }
+        .stat-value {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .custom-description {
+            margin-top: 15px;
+            padding: 15px;
+            background: #222;
+            border-radius: 5px;
+        }
+        .warning {
+            color: #ff6b6b;
+            font-size: 0.9em;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗡️ Тёмное Подземелье с DeepSeek 🧙</h1>
+        <p style="text-align: center; color: #aaa;">Мастер — безжалостный ИИ, мат приветствуется</p>
+        
+        <div class="create-section">
+            <h2>Создать новую игру</h2>
+            <input type="text" id="roomName" placeholder="Название приключения (необязательно)">
+            <button onclick="createRoom()">Создать комнату</button>
+        </div>
+        
+        <div class="join-section">
+            <h2>Присоединиться к игре</h2>
+            <input type="text" id="roomId" placeholder="Код комнаты">
+            <input type="text" id="playerName" placeholder="Имя персонажа (хоть матом)">
+            
+            <h3>Выберите класс:</h3>
+            <div class="class-selector">
+                <div class="class-card" onclick="selectClass('warrior')" id="class-warrior">
+                    <h3>⚔️ Воин</h3>
+                    <div class="stats">
+                        <div class="stat-row"><span>Сила:</span> <span class="stat-value">18</span></div>
+                        <div class="stat-row"><span>Ловкость:</span> <span class="stat-value">12</span></div>
+                        <div class="stat-row"><span>Интеллект:</span> <span class="stat-value">8</span></div>
+                        <div class="stat-row"><span>Харизма:</span> <span class="stat-value">10</span></div>
+                        <div class="stat-row"><span>Восприятие:</span> <span class="stat-value">12</span></div>
+                        <div class="stat-row"><span>Удача:</span> <span class="stat-value">10</span></div>
+                    </div>
+                    <div style="color: #4CAF50; font-size: 0.9em;">HP: 46 | MP: 0</div>
+                </div>
+                <div class="class-card" onclick="selectClass('mage')" id="class-mage">
+                    <h3>🔮 Маг</h3>
+                    <div class="stats">
+                        <div class="stat-row"><span>Сила:</span> <span class="stat-value">8</span></div>
+                        <div class="stat-row"><span>Ловкость:</span> <span class="stat-value">10</span></div>
+                        <div class="stat-row"><span>Интеллект:</span> <span class="stat-value">18</span></div>
+                        <div class="stat-row"><span>Харизма:</span> <span class="stat-value">12</span></div>
+                        <div class="stat-row"><span>Восприятие:</span> <span class="stat-value">12</span></div>
+                        <div class="stat-row"><span>Удача:</span> <span class="stat-value">10</span></div>
+                    </div>
+                    <div style="color: #4CAF50; font-size: 0.9em;">HP: 26 | MP: 59</div>
+                </div>
+                <div class="class-card" onclick="selectClass('rogue')" id="class-rogue">
+                    <h3>🗡️ Вор</h3>
+                    <div class="stats">
+                        <div class="stat-row"><span>Сила:</span> <span class="stat-value">10</span></div>
+                        <div class="stat-row"><span>Ловкость:</span> <span class="stat-value">18</span></div>
+                        <div class="stat-row"><span>Интеллект:</span> <span class="stat-value">12</span></div>
+                        <div class="stat-row"><span>Харизма:</span> <span class="stat-value">10</span></div>
+                        <div class="stat-row"><span>Восприятие:</span> <span class="stat-value">14</span></div>
+                        <div class="stat-row"><span>Удача:</span> <span class="stat-value">10</span></div>
+                    </div>
+                    <div style="color: #4CAF50; font-size: 0.9em;">HP: 30 | MP: 0</div>
+                </div>
+                <div class="class-card" onclick="selectClass('cleric')" id="class-cleric">
+                    <h3>✨ Священник</h3>
+                    <div class="stats">
+                        <div class="stat-row"><span>Сила:</span> <span class="stat-value">12</span></div>
+                        <div class="stat-row"><span>Ловкость:</span> <span class="stat-value">8</span></div>
+                        <div class="stat-row"><span>Интеллект:</span> <span class="stat-value">14</span></div>
+                        <div class="stat-row"><span>Харизма:</span> <span class="stat-value">16</span></div>
+                        <div class="stat-row"><span>Восприятие:</span> <span class="stat-value">10</span></div>
+                        <div class="stat-row"><span>Удача:</span> <span class="stat-value">10</span></div>
+                    </div>
+                    <div style="color: #4CAF50; font-size: 0.9em;">HP: 34 | MP: 47</div>
+                </div>
+            </div>
+            
+            <div class="custom-description">
+                <p><strong>Или создайте своего персонажа:</strong></p>
+                <textarea id="customCharacter" placeholder="Опишите персонажа свободно. Например: 'Бывший наёмник, потерявший руку, но научившийся драться ногами. Злой как чёрт, пьёт как лошадь.' ИИ сам определит характеристики." rows="3"></textarea>
+            </div>
+            
+            <button onclick="joinRoom()">Войти в таверну и нажраться</button>
+            <p class="warning">⚠️ Мат и жестокость разрешены. ИИ ответит тем же.</p>
+        </div>
+    </div>
+
+    <script>
+        let selectedClass = null;
+        
+        function selectClass(className) {
+            document.querySelectorAll('.class-card').forEach(c => {
+                c.classList.remove('selected');
+            });
+            
+            document.getElementById(`class-${className}`).classList.add('selected');
+            selectedClass = className;
+            document.getElementById('customCharacter').value = '';
+        }
+        
+        function getCharacterJSON() {
+            const customChar = document.getElementById('customCharacter').value;
+            
+            if (customChar.trim()) {
+                return JSON.stringify({
+                    type: 'custom',
+                    description: customChar,
+                    class: 'custom'
+                });
+            }
+            
+            const classes = {
+                warrior: {
+                    class: 'Воин',
+                    strength: 18, dexterity: 12, intelligence: 8,
+                    charisma: 10, perception: 12, luck: 10,
+                    hp: 46, mp: 0, stamina: 19
+                },
+                mage: {
+                    class: 'Маг',
+                    strength: 8, dexterity: 10, intelligence: 18,
+                    charisma: 12, perception: 12, luck: 10,
+                    hp: 26, mp: 59, stamina: 14
+                },
+                rogue: {
+                    class: 'Вор',
+                    strength: 10, dexterity: 18, intelligence: 12,
+                    charisma: 10, perception: 14, luck: 10,
+                    hp: 30, mp: 0, stamina: 19
+                },
+                cleric: {
+                    class: 'Священник',
+                    strength: 12, dexterity: 8, intelligence: 14,
+                    charisma: 16, perception: 10, luck: 10,
+                    hp: 34, mp: 47, stamina: 15
+                }
+            };
+            
+            if (selectedClass && classes[selectedClass]) {
+                return JSON.stringify(classes[selectedClass]);
+            }
+            
+            return JSON.stringify(classes.warrior);
+        }
+        
+        function createRoom() {
+            const name = document.getElementById('roomName').value || 'Тёмное приключение';
+            fetch('/create_room', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: name})
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert(`Комната создана! Код: ${data.room_id}`);
+                document.getElementById('roomId').value = data.room_id;
+            });
+        }
+        
+        function joinRoom() {
+            const roomId = document.getElementById('roomId').value;
+            const playerName = document.getElementById('playerName').value;
+            
+            if (!roomId || !playerName) {
+                alert('Введите код комнаты и имя!');
+                return;
+            }
+            
+            const character = getCharacterJSON();
+            
+            fetch('/join_room', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    room_id: roomId,
+                    player_name: playerName,
+                    character: character
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    window.location.href = `/room/${roomId}`;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

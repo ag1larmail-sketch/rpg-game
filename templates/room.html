@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RPG Комната {{ room_id }}</title>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            display: flex;
+            height: 100vh;
+        }
+        
+        .players-panel {
+            width: 250px;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            margin-right: 20px;
+            overflow-y: auto;
+        }
+        
+        .player-card {
+            background: #2d2d2d;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .ready-indicator {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .ready { background: #4CAF50; box-shadow: 0 0 10px #4CAF50; }
+        .not-ready { background: #f44336; }
+        
+        .chat-panel {
+            flex: 1;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            background: #2d2d2d;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .message {
+            margin: 10px 0;
+            padding: 15px;
+            background: #363636;
+            border-radius: 5px;
+            border-left: 3px solid #ffd700;
+            line-height: 1.5;
+        }
+        
+        .gm-message {
+            border-left-color: #4CAF50;
+            background: #1e3a1e;
+        }
+        
+        .gm-message strong {
+            color: #ffd700;
+        }
+        
+        .gm-message em {
+            color: #98fb98;
+            font-style: italic;
+        }
+        
+        .action-area {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .custom-action {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        textarea {
+            flex: 1;
+            height: 80px;
+            padding: 10px;
+            background: #2d2d2d;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 5px;
+            resize: vertical;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 14px;
+        }
+        
+        .send-btn {
+            width: 120px;
+            padding: 10px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .send-btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        
+        .send-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .player-name {
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .timestamp {
+            color: #888;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 5px;
+        }
+        
+        .voice-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #333;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        
+        .voice-btn {
+            background: none;
+            border: 1px solid #4CAF50;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        
+        .voice-btn:hover {
+            background: #4CAF50;
+        }
+        
+        .voice-btn.active {
+            background: #4CAF50;
+            border-color: #ffd700;
+        }
+        
+        .voice-btn.speaking {
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+        }
+        
+        .volume-slider {
+            width: 80px;
+            height: 5px;
+            -webkit-appearance: none;
+            background: #444;
+            border-radius: 5px;
+            outline: none;
+        }
+        
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+        }
+        
+        .waiting-status {
+            color: #ffd700;
+        }
+        
+        .stats {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+        
+        .player-character {
+            font-size: 0.8em;
+            color: #888;
+        }
+        
+        .hint {
+            font-size: 0.9em;
+            color: #888;
+            text-align: center;
+            margin-top: 5px;
+        }
+    </style>
+    
+    <script>
+        function speakText(text) {
+            if (!window.speechSynthesis) {
+                console.log('Голосовое воспроизведение не поддерживается');
+                return;
+            }
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ru-RU';
+            utterance.rate = 0.9;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            const voices = window.speechSynthesis.getVoices();
+            const russianVoice = voices.find(voice => voice.lang.includes('ru'));
+            if (russianVoice) {
+                utterance.voice = russianVoice;
+            }
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function extractPlainText(htmlText) {
+            const temp = document.createElement('div');
+            temp.innerHTML = htmlText;
+            return temp.textContent || temp.innerText || '';
+        }
+    </script>
+</head>
+<body>
+    <div class="players-panel">
+        <h3>👥 Игроки</h3>
+        <div id="players-list"></div>
+    </div>
+    
+    <div class="chat-panel">
+        <div class="status-bar">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span class="waiting-status" id="waitingStatus">⏳ Ожидаем действия игроков...</span>
+                <div class="voice-controls">
+                    <button class="voice-btn" onclick="toggleVoice()" id="voiceToggleBtn" title="Включить/выключить рассказчика">
+                        🔇 Выкл
+                    </button>
+                    <button class="voice-btn" onclick="speakLastMessage()" id="speakLastBtn" title="Озвучить последнее сообщение">
+                        🔊 Озвучить
+                    </button>
+                    <button class="voice-btn" onclick="stopSpeaking()" id="stopBtn" title="Остановить">
+                        ⏹️ Стоп
+                    </button>
+                    <input type="range" min="0" max="1" step="0.1" value="1" class="volume-slider" id="volumeSlider" onchange="changeVolume(this.value)" title="Громкость">
+                </div>
+            </div>
+            <span class="stats" id="playerStats"></span>
+        </div>
+        
+        <div class="messages" id="messages"></div>
+        
+        <div class="action-area">
+            <!-- Только поле для ввода своего действия, без кнопок выбора -->
+            <div class="custom-action">
+                <textarea id="actionInput" placeholder="Напиши, что делает твой персонаж... Например: 'Подхожу к бармену и требую выпивку' или 'Пытаюсь незаметно стащить кошель у пьяного моряка'"></textarea>
+                <button class="send-btn" onclick="sendAction()" id="sendButton">Отправить</button>
+            </div>
+            
+            <div class="hint">
+                💡 Просто напиши, что хочешь сделать. Никаких готовых вариантов — только твоя фантазия!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const playerId = '{{ session.player_id }}';
+        const roomId = '{{ room_id }}';
+        
+        const socket = io();
+        let currentPlayer = null;
+        let lastGMMessage = '';
+        let voiceEnabled = false;
+        let currentUtterance = null;
+        let autoSpeakEnabled = false;
+        let currentVolume = 1.0;
+        
+        socket.on('connect', function() {
+            socket.emit('join', {room: roomId});
+        });
+        
+        socket.on('players_update', function(data) {
+            updatePlayersList(data.players);
+            updateCurrentPlayer(data.players);
+            checkAllReady(data.players);
+        });
+        
+        socket.on('new_gm_message', function(data) {
+            addMessage(data.message, 'gm');
+            if (!data.history) {
+                document.getElementById('messages').scrollTop = 
+                    document.getElementById('messages').scrollHeight;
+            }
+        });
+        
+        socket.on('all_ready', function() {
+            document.getElementById('waitingStatus').innerHTML = '⚡ Мастер думает...';
+        });
+        
+        function updatePlayersList(players) {
+            const list = document.getElementById('players-list');
+            list.innerHTML = '';
+            
+            players.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'player-card';
+                
+                let charInfo = '';
+                try {
+                    const char = JSON.parse(p.character || '{}');
+                    if (char.class) {
+                        charInfo = `<div class="player-character">${char.class}</div>`;
+                    }
+                } catch (e) {}
+                
+                div.innerHTML = `
+                    <div class="ready-indicator ${p.ready ? 'ready' : 'not-ready'}"></div>
+                    <div>
+                        <strong>${p.name}</strong>
+                        ${charInfo}
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+        
+        function updateCurrentPlayer(players) {
+            currentPlayer = players.find(p => p.id == playerId);
+            if (currentPlayer) {
+                try {
+                    const char = JSON.parse(currentPlayer.character || '{}');
+                    if (char.class) {
+                        document.getElementById('playerStats').innerHTML = 
+                            `${char.class} | ❤️ ${char.hp || '?'} | 🔮 ${char.mp || '?'}`;
+                    }
+                } catch (e) {}
+                
+                if (currentPlayer.ready) {
+                    document.getElementById('sendButton').disabled = true;
+                    document.getElementById('sendButton').textContent = '✓ Отправлено';
+                } else {
+                    document.getElementById('sendButton').disabled = false;
+                    document.getElementById('sendButton').textContent = 'Отправить';
+                }
+            }
+        }
+        
+        function checkAllReady(players) {
+            const allReady = players.every(p => p.ready);
+            if (allReady && players.length > 0) {
+                document.getElementById('waitingStatus').innerHTML = '⚡ Все готовы! Мастер обрабатывает ход...';
+            } else {
+                const readyCount = players.filter(p => p.ready).length;
+                document.getElementById('waitingStatus').innerHTML = 
+                    `⏳ Ожидаем действия игроков (${readyCount}/${players.length})...`;
+            }
+        }
+        
+        function sendAction() {
+            const action = document.getElementById('actionInput').value;
+            if (!action.trim()) {
+                alert('Опиши действие!');
+                return;
+            }
+            
+            socket.emit('action', {
+                player_id: playerId,
+                action: action,
+                room: roomId
+            });
+            
+            document.getElementById('sendButton').disabled = true;
+            document.getElementById('sendButton').textContent = '✓ Отправлено';
+            
+            // Очищаем поле ввода
+            document.getElementById('actionInput').value = '';
+        }
+        
+        function addMessage(text, type) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type === 'gm' ? 'gm-message' : ''}`;
+            
+            const time = new Date().toLocaleTimeString();
+            
+            let formattedText = text
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/`(.+?)`/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
+            
+            messageDiv.innerHTML = `
+                <span class="player-name">🎲 Мастер DeepSeek</span>
+                <span class="timestamp">${time}</span>
+                <div style="margin-top: 10px;">${formattedText}</div>
+            `;
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            if (type === 'gm') {
+                lastGMMessage = text;
+                if (autoSpeakEnabled) {
+                    const plainText = extractPlainText(formattedText);
+                    speakText(plainText);
+                }
+            }
+        }
+        
+        function cleanTextForSpeech(text) {
+            return text
+                .replace(/\*\*(.+?)\*\*/g, '$1')
+                .replace(/\*(.+?)\*/g, '$1')
+                .replace(/`(.+?)`/g, '$1')
+                .replace(/#+\s*/g, '')
+                .replace(/Статус:/gi, '')
+                .replace(/Описание:/gi, '')
+                .replace(/Диалог:/gi, '')
+                .replace(/[*\-—•]/g, '')
+                .replace(/\s+/g, ' ')
+                .replace(/\n\s*\n/g, '\n')
+                .trim();
+        }
+        
+        function speakLastMessage() {
+            if (lastGMMessage) {
+                const plainText = cleanTextForSpeech(lastGMMessage);
+                speakText(plainText);
+            } else {
+                alert('Нет сообщений для озвучивания');
+            }
+        }
+        
+        function toggleVoice() {
+            autoSpeakEnabled = !autoSpeakEnabled;
+            const btn = document.getElementById('voiceToggleBtn');
+            if (autoSpeakEnabled) {
+                btn.innerHTML = '🔊 Вкл';
+                btn.classList.add('active');
+            } else {
+                btn.innerHTML = '🔇 Выкл';
+                btn.classList.remove('active');
+                stopSpeaking();
+            }
+        }
+        
+        function stopSpeaking() {
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+        }
+        
+        function changeVolume(volume) {
+            currentVolume = parseFloat(volume);
+        }
+        
+        // Добавляем отправку по Ctrl+Enter
+        document.getElementById('actionInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                e.preventDefault();
+                sendAction();
+            }
+        });
+        
+        // Инициализация голосов
+        window.speechSynthesis.onvoiceschanged = function() {
+            // Просто инициализируем
+        };
+    </script>
+</body>
+</html>
